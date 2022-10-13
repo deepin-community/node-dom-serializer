@@ -1,0 +1,8 @@
+@babel/parser
+@babel/types
+domelementtype
+entities
+jest-diff
+pretty-format
+@types/istanbul-lib-coverage
+@types/node

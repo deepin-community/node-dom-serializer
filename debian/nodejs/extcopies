@@ -1,0 +1,7 @@
+cheerio
+domhandler
+domutils
+dom-serializer
+htmlparser2
+@types/istanbul-lib-report
+@types/jest
