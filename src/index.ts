@@ -2,8 +2,15 @@
  * Module dependencies
  */
 import * as ElementType from "domelementtype";
-import type { Node, NodeWithChildren, Element, DataNode } from "domhandler";
-import { encodeXML } from "entities";
+import type {
+  AnyNode,
+  Element,
+  ProcessingInstruction,
+  Comment,
+  Text,
+  CDATA,
+} from "domhandler";
+import { encodeXML, escapeAttribute, escapeText } from "entities";
 
 /**
  * Mixed-case SVG and MathML tags & attributes
@@ -11,7 +18,7 @@ import { encodeXML } from "entities";
  *
  * @see https://html.spec.whatwg.org/multipage/parsing.html#parsing-main-inforeign
  */
-import { elementNames, attributeNames } from "./foreignNames";
+import { elementNames, attributeNames } from "./foreignNames.js";
 
 export interface DomSerializerOptions {
   /**
@@ -39,7 +46,15 @@ export interface DomSerializerOptions {
    */
   xmlMode?: boolean | "foreign";
   /**
-   * Encode characters that are either reserved in HTML or XML, or are outside of the ASCII range.
+   * Encode characters that are either reserved in HTML or XML.
+   *
+   * If `xmlMode` is `true` or the value not `'utf8'`, characters outside of the utf8 range will be encoded as well.
+   *
+   * @default `decodeEntities`
+   */
+  encodeEntities?: boolean | "utf8";
+  /**
+   * Option inherited from parsing; will be used as the default value for `encodeEntities`.
    *
    * @default true
    */
@@ -57,6 +72,10 @@ const unencodedElements = new Set([
   "noscript",
 ]);
 
+function replaceQuotes(value: string): string {
+  return value.replace(/"/g, "&quot;");
+}
+
 /**
  * Format attributes
  */
@@ -65,6 +84,13 @@ function formatAttributes(
   opts: DomSerializerOptions
 ) {
   if (!attributes) return;
+
+  const encode =
+    (opts.encodeEntities ?? opts.decodeEntities) === false
+      ? replaceQuotes
+      : opts.xmlMode || opts.encodeEntities !== "utf8"
+      ? encodeXML
+      : escapeAttribute;
 
   return Object.keys(attributes)
     .map((key) => {
@@ -79,11 +105,7 @@ function formatAttributes(
         return key;
       }
 
-      return `${key}="${
-        opts.decodeEntities !== false
-          ? encodeXML(value)
-          : value.replace(/"/g, "&quot;")
-      }"`;
+      return `${key}="${encode(value)}"`;
     })
     .join(" ");
 }
@@ -121,11 +143,11 @@ const singleTag = new Set([
  * @param node Node to be rendered.
  * @param options Changes serialization behavior
  */
-export default function render(
-  node: Node | ArrayLike<Node>,
+export function render(
+  node: AnyNode | ArrayLike<AnyNode>,
   options: DomSerializerOptions = {}
 ): string {
-  const nodes: ArrayLike<Node> = "length" in node ? node : [node];
+  const nodes = "length" in node ? node : [node];
 
   let output = "";
 
@@ -136,23 +158,26 @@ export default function render(
   return output;
 }
 
-function renderNode(node: Node, options: DomSerializerOptions): string {
+export default render;
+
+function renderNode(node: AnyNode, options: DomSerializerOptions): string {
   switch (node.type) {
     case ElementType.Root:
-      return render((node as NodeWithChildren).children, options);
-    case ElementType.Directive:
+      return render(node.children, options);
+    // @ts-expect-error We don't use `Doctype` yet
     case ElementType.Doctype:
-      return renderDirective(node as DataNode);
+    case ElementType.Directive:
+      return renderDirective(node);
     case ElementType.Comment:
-      return renderComment(node as DataNode);
+      return renderComment(node);
     case ElementType.CDATA:
-      return renderCdata(node as NodeWithChildren);
+      return renderCdata(node);
     case ElementType.Script:
     case ElementType.Style:
     case ElementType.Tag:
-      return renderTag(node as Element, options);
+      return renderTag(node, options);
     case ElementType.Text:
-      return renderText(node as DataNode, options);
+      return renderText(node, options);
   }
 }
 
@@ -218,32 +243,35 @@ function renderTag(elem: Element, opts: DomSerializerOptions) {
   return tag;
 }
 
-function renderDirective(elem: DataNode) {
+function renderDirective(elem: ProcessingInstruction) {
   return `<${elem.data}>`;
 }
 
-function renderText(elem: DataNode, opts: DomSerializerOptions) {
+function renderText(elem: Text, opts: DomSerializerOptions) {
   let data = elem.data || "";
 
   // If entities weren't decoded, no need to encode them back
   if (
-    opts.decodeEntities !== false &&
+    (opts.encodeEntities ?? opts.decodeEntities) !== false &&
     !(
       !opts.xmlMode &&
       elem.parent &&
       unencodedElements.has((elem.parent as Element).name)
     )
   ) {
-    data = encodeXML(data);
+    data =
+      opts.xmlMode || opts.encodeEntities !== "utf8"
+        ? encodeXML(data)
+        : escapeText(data);
   }
 
   return data;
 }
 
-function renderCdata(elem: NodeWithChildren) {
-  return `<![CDATA[${(elem.children[0] as DataNode).data}]]>`;
+function renderCdata(elem: CDATA) {
+  return `<![CDATA[${(elem.children[0] as Text).data}]]>`;
 }
 
-function renderComment(elem: DataNode) {
+function renderComment(elem: Comment) {
   return `<!--${elem.data}-->`;
 }

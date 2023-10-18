@@ -1,15 +1,13 @@
 import cheerio from "cheerio";
 import parse from "cheerio/lib/parse";
-import render from "./index";
+import render, { DomSerializerOptions } from "./index";
+// TODO: We need to temporarily override the Document type
+import type { Document } from "domhandler";
 
 const defaultOpts = cheerio.prototype.options;
 
-interface CheerioOptions {
+interface CheerioOptions extends DomSerializerOptions {
   _useHtmlParser2?: boolean;
-  normalizeWhitespace?: boolean;
-  decodeEntities?: boolean;
-  emptyAttrs?: boolean;
-  selfClosingTags?: boolean;
 }
 
 function html(
@@ -18,13 +16,13 @@ function html(
   options: CheerioOptions = {}
 ) {
   const opts = { ...defaultOpts, ...preset, ...options };
-  const dom = parse(str, opts, true);
+  const dom = parse(str, opts, true) as Document;
   return render(dom, opts);
 }
 
 function xml(str: string, options: CheerioOptions = {}) {
   const opts = { ...defaultOpts, ...options, xmlMode: true };
-  const dom = parse(str, opts, true);
+  const dom = parse(str, opts, true) as Document;
   return render(dom, opts);
 }
 
@@ -41,6 +39,13 @@ describe("render DOM parsed with htmlparser2", () => {
       expect(htmlFunc(str)).toStrictEqual(
         '<hr class="an &quot;edge&quot; case">'
       );
+    });
+
+    it("should escape entities to utf8 if requested", () => {
+      const str = '<a href="a < b &quot; & c">& " &lt; &gt;</a>';
+      expect(
+        html({ _useHtmlParser2: true, encodeEntities: "utf8" }, str)
+      ).toStrictEqual('<a href="a < b &quot; &amp; c">&amp; " &lt; &gt;</a>');
     });
   });
 
@@ -185,13 +190,6 @@ function testBody(html: (input: string, opts?: CheerioOptions) => string) {
     expect(html(str)).toStrictEqual(str);
   });
 
-  it("should normalize whitespace if specified", () => {
-    const str = '<a href="./haha.html">hi</a> <a href="./blah.html">blah  </a>';
-    expect(html(str, { normalizeWhitespace: true })).toStrictEqual(
-      '<a href="./haha.html">hi</a> <a href="./blah.html">blah </a>'
-    );
-  });
-
   it("should preserve multiple hyphens in data attributes", () => {
     const str = '<div data-foo-bar-baz="value"></div>';
     expect(html(str)).toStrictEqual('<div data-foo-bar-baz="value"></div>');
@@ -259,5 +257,12 @@ function testBody(html: (input: string, opts?: CheerioOptions) => string) {
   it("should render iframe nodes with a closing tag in HTML mode", () => {
     const str = '<iframe src="test"></iframe>';
     expect(html(str)).toStrictEqual(str);
+  });
+
+  it("should encode double quotes in attribute", () => {
+    const str = `<img src="/" alt='title" onerror="alert(1)" label="x'>`;
+    expect(html(str)).toStrictEqual(
+      '<img src="/" alt="title&quot; onerror=&quot;alert(1)&quot; label=&quot;x">'
+    );
   });
 }

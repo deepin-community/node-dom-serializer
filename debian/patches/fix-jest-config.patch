@@ -1,0 +1,16 @@
+Description: fix jest config
+Author: Yadd <yadd@debian.org>
+Forwarded: not-needed
+Last-Update: 2022-06-25
+
+--- a/package.json
++++ b/package.json
+@@ -61,7 +61,7 @@
+     "preset": "ts-jest",
+     "testEnvironment": "node",
+     "moduleNameMapper": {
+-      "^(.*)\\.js$": "$1"
++      "^(\\..*)\\.js$": "$1"
+     }
+   },
+   "funding": "https://github.com/cheeriojs/dom-serializer?sponsor=1",
