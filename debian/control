@@ -6,15 +6,15 @@ Testsuite: autopkgtest-pkg-nodejs
 Priority: optional
 Build-Depends:
  debhelper-compat (= 13)
- , jest (>= 26.6.3+repack+~cs61.38.31-5~)
- , nodejs
- , node-cheerio (>= 1.0.0~rc~5~)
- , node-entities (>= 2.0.0~) <!nocheck>
- , node-domelementtype (>= 2.0.1~) <!nocheck>
- , node-domhandler (>= 4.2.0~) <!nocheck>
- , node-typescript
  , dh-sequence-nodejs
-Standards-Version: 4.6.0
+ , jest (>= 27~)
+ , node-cheerio (>= 1.0.0~rc~9~)
+ , node-entities (>= 4.2.0~) <!nocheck>
+ , node-domelementtype (>= 2.3.0~) <!nocheck>
+ , node-domhandler (>= 5.0.2~) <!nocheck>
+ , node-typescript
+ , ts-jest
+Standards-Version: 4.6.2
 Vcs-Browser: https://salsa.debian.org/js-team/node-dom-serializer
 Vcs-Git: https://salsa.debian.org/js-team/node-dom-serializer.git
 Homepage: https://github.com/cheeriojs/dom-renderer
@@ -24,9 +24,9 @@ Package: node-dom-serializer
 Architecture: all
 Depends:
  ${misc:Depends}
- , node-entities (>= 2.0.0~)
- , node-domelementtype (>= 2.0.1~)
- , node-domhandler (>= 4.2.0~)
+ , node-entities (>= 4.2.0~)
+ , node-domelementtype (>= 2.3.0~)
+ , node-domhandler (>= 5.0.2~)
 Breaks: node-cheerio (<< 1.0.0~rc~5+~cs6.1.2~)
 Description: render htmlparser2's DOM nodes to string
  Node.js module that renders to a tring a DOM (Document Object

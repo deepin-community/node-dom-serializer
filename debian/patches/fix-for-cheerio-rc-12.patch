@@ -1,0 +1,21 @@
+Description: fix for node-cheerio 1.0.0-rc-12
+Author: upstream
+Origin: upstream, https://github.com/cheeriojs/dom-serializer/blob/master/src/index.spec.ts
+Forwarded: not-needed
+Reviewed-By: Yadd <yadd@debian.org>
+Last-Update: 2022-11-30
+
+--- a/src/index.spec.ts
++++ b/src/index.spec.ts
+@@ -1,10 +1,9 @@
+ import cheerio from "cheerio";
+-import parse from "cheerio/lib/parse";
+ import render, { DomSerializerOptions } from "./index";
+ // TODO: We need to temporarily override the Document type
+ import type { Document } from "domhandler";
+ 
+-const defaultOpts = cheerio.prototype.options;
++const { _parse: parse, options: defaultOpts } = cheerio.prototype;
+ 
+ interface CheerioOptions extends DomSerializerOptions {
+   _useHtmlParser2?: boolean;
